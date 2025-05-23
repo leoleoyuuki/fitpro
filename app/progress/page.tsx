@@ -649,41 +649,102 @@ export default function ProgressPage() {
       return;
     }
 
-    // Map selected exercises with their logged sets
-    const loggedExercisesWithSets: Exercise[] = selectedTrainingDayExercises.map(ex => ({
-      ...ex,
-      loggedSets: currentLoggedSets[ex.name] || [],
-    }));
-
-    // Calculate personal bests from the logged sets for this session
-    let currentSessionBenchPress =   0;
-    let currentSessionSquat = 0;
-    let currentSessionDeadlift = 0;
-
-    loggedExercisesWithSets.forEach(ex => {
-      const bestSetForExercise = ex.loggedSets?.reduce((maxSet, currentSet) => {
-        return currentSet.weight > maxSet.weight ? currentSet : maxSet;
-      }, { weight: 0, reps: 0, rir: 0 });
-
-      if (bestSetForExercise) {
-        // Update personal bests based on exercise name
-        if (ex.name.toLowerCase().includes('supino')) {
-          currentSessionBenchPress = Math.max(currentSessionBenchPress, bestSetForExercise.weight);
-        } else if (ex.name.toLowerCase().includes('agachamento')) {
-          currentSessionSquat = Math.max(currentSessionSquat, bestSetForExercise.weight);
-        } else if (ex.name.toLowerCase().includes('levantamento terra')) {
-          currentSessionDeadlift = Math.max(currentSessionDeadlift, bestSetForExercise.weight);
-        }
+    try {
+      const user = auth.currentUser;
+      if (!user) {
+        router.push('/login');
+        return;
       }
-    });
 
-    // Update personal bests if the current session values are higher
-    const updatedPersonalBests = {
-      benchPress: Math.max(userStats.personalBests.benchPress, currentSessionBenchPress),
-      squat: Math.max(userStats.personalBests.squat, currentSessionSquat),
-      deadlift: Math.max(userStats.personalBests.deadlift, currentSessionDeadlift),
-    };
+      // Map selected exercises with their logged sets
+      const loggedExercisesWithSets: Exercise[] = selectedTrainingDayExercises.map(ex => ({
+        ...ex,
+        loggedSets: currentLoggedS
+ets[ex.name] || [],
+      }));
 
-    // Continue with the rest of the progress update logic...
+      // Calculate personal bests from the logged sets for this session
+      let currentSessionBenchPress = 0;
+      let currentSessionSquat = 0;
+      let currentSessionDeadlift = 0;
+
+      loggedExercisesWithSets.forEach(ex => {
+        const bestSetForExercise = ex.loggedSets?.reduce((maxSet, currentSet) => {
+          return currentSet.weight > maxSet.weight ? currentSet : maxSet;
+        }, { weight: 0, reps: 0, rir: 0 });
+
+        if (bestSetForExercise) {
+          // Update personal bests based on exercise name
+          if (ex.name.toLowerCase().includes('supino')) {
+            currentSessionBenchPress = Math.max(currentSessionBenchPress, bestSetForExercise.weight);
+          } else if (ex.name.toLowerCase().includes('agachamento')) {
+            currentSessionSquat = Math.max(currentSessionSquat, bestSetForExercise.weight);
+          } else if (ex.name.toLowerCase().includes('levantamento terra')) {
+            currentSessionDeadlift = Math.max(currentSessionDeadlift, bestSetForExercise.weight);
+          }
+        }
+      });
+
+      // Update personal bests if the current session values are higher
+      const updatedPersonalBests = {
+        benchPress: Math.max(userStats.personalBests.benchPress, currentSessionBenchPress),
+        squat: Math.max(userStats.personalBests.squat, currentSessionSquat),
+        deadlift: Math.max(userStats.personalBests.deadlift, currentSessionDeadlift),
+      };
+
+      // Format date as yyyy-MM-dd for Firestore document ID
+      const dateString = format(selectedDate, 'yyyy-MM-dd');
+
+      // Create the progress entry
+      const progressEntry: ProgressData = {
+        date: dateString,
+        bodyWeight: bodyWeight as number,
+        selectedPlanId: selectedPredefinedPlanId,
+        selectedPlanDayId: selectedPredefinedPlanDayId,
+        loggedExercises: loggedExercisesWithSets,
+      };
+
+      // Save progress entry to Firestore
+      const progressRef = doc(db, 'users', user.uid, 'progress', dateString);
+      await setDoc(progressRef, progressEntry);
+
+      // Update user stats
+      const updatedStats: UserStats = {
+        ...userStats,
+        workoutsCompleted: userStats.workoutsCompleted + 1,
+        experience: userStats.experience + 100, // Add experience for completing a workout
+        personalBests: updatedPersonalBests,
+      };
+
+      // Calculate new level based on experience
+      updatedStats.level = calculateLevel(updatedStats.experience);
+
+      // Update stats in Firestore
+      const statsRef = doc(db, 'users', user.uid, 'stats', 'overview');
+      await setDoc(statsRef, updatedStats);
+
+      // Update local state
+      setUserStats(updatedStats);
+      setProgressData(prev => [progressEntry, ...prev]); // Add new entry to start of array
+
+      toast({
+        title: 'Sucesso',
+        description: 'Progresso registrado com sucesso!',
+      });
+
+      // Reset form
+      setBodyWeight('');
+      setSelectedTrainingDayExercises([]);
+      setCurrentLoggedSets({});
+      setSelectedPredefinedPlanDayId(null);
+
+    } catch (error) {
+      console.error('Error updating progress:', error);
+      toast({
+        variant: 'destructive',
+        title: 'Erro',
+        description: 'Falha ao salvar o progresso. Tente novamente.',
+      });
+    }
   };
 }
