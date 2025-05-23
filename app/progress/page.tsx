@@ -656,16 +656,34 @@ export default function ProgressPage() {
     }));
 
     // Calculate personal bests from the logged sets for this session
-    let currentSessionBenchPress = 0;
+    let currentSessionBenchPress =   0;
     let currentSessionSquat = 0;
     let currentSessionDeadlift = 0;
 
     loggedExercisesWithSets.forEach(ex => {
       const bestSetForExercise = ex.loggedSets?.reduce((maxSet, currentSet) => {
-        return currentSet.weight > maxSet.weight ? currentSet : max
+        return currentSet.weight > maxSet.weight ? currentSet : maxSet;
+      }, { weight: 0, reps: 0, rir: 0 });
+
+      if (bestSetForExercise) {
+        // Update personal bests based on exercise name
+        if (ex.name.toLowerCase().includes('supino')) {
+          currentSessionBenchPress = Math.max(currentSessionBenchPress, bestSetForExercise.weight);
+        } else if (ex.name.toLowerCase().includes('agachamento')) {
+          currentSessionSquat = Math.max(currentSessionSquat, bestSetForExercise.weight);
+        } else if (ex.name.toLowerCase().includes('levantamento terra')) {
+          currentSessionDeadlift = Math.max(currentSessionDeadlift, bestSetForExercise.weight);
+        }
       }
-      )
-    }
-    )
-  }
+    });
+
+    // Update personal bests if the current session values are higher
+    const updatedPersonalBests = {
+      benchPress: Math.max(userStats.personalBests.benchPress, currentSessionBenchPress),
+      squat: Math.max(userStats.personalBests.squat, currentSessionSquat),
+      deadlift: Math.max(userStats.personalBests.deadlift, currentSessionDeadlift),
+    };
+
+    // Continue with the rest of the progress update logic...
+  };
 }
