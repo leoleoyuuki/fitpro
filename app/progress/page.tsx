@@ -23,7 +23,6 @@ import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 
-
 // Interface for set data
 interface SetData {
   weight: number;
@@ -335,7 +334,6 @@ const dummyPredefinedPlans: PredefinedTrainingPlan[] = [
   },
 ];
 
-
 export default function ProgressPage() {
   const router = useRouter();
   const { toast } = useToast();
@@ -424,7 +422,6 @@ export default function ProgressPage() {
     }, { weight: 0, reps: 0, rir: 0 }); // Initialize with a dummy set
   };
 
-
   useEffect(() => {
     const fetchUserData = async () => {
       const user = auth.currentUser;
@@ -487,7 +484,7 @@ export default function ProgressPage() {
             benchPress: 0,
             squat: 0,
             deadlift: 0,
-                     };
+           };
         }
 
         // Ensure weeklyAvailability has a default if still undefined
@@ -618,7 +615,6 @@ export default function ProgressPage() {
     });
   };
 
-
   const handleProgressUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -659,8 +655,7 @@ export default function ProgressPage() {
       // Map selected exercises with their logged sets
       const loggedExercisesWithSets: Exercise[] = selectedTrainingDayExercises.map(ex => ({
         ...ex,
-        loggedSets: currentLoggedS
-ets[ex.name] || [],
+        loggedSets: currentLoggedSets[ex.name] || [],
       }));
 
       // Calculate personal bests from the logged sets for this session
@@ -747,4 +742,230 @@ ets[ex.name] || [],
       });
     }
   };
+
+  return (
+    <div className="container mx-auto p-4">
+      <h1 className="text-3xl font-bold mb-6">Progresso</h1>
+      <Tabs defaultValue="log" className="w-full">
+        <TabsList>
+          <TabsTrigger value="log">Registrar Treino</TabsTrigger>
+          <TabsTrigger value="history">Histórico</TabsTrigger>
+          <TabsTrigger value="achievements">Conquistas</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="log">
+          <Card>
+            <CardHeader>
+              <CardTitle>Registrar Treino</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <form onSubmit={handleProgressUpdate} className="space-y-6">
+                <div className="space-y-4">
+                  {/* Date Selection */}
+                  <div className="flex flex-col space-y-2">
+                    <Label>Data do Treino</Label>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="outline"
+                          className={cn(
+                            "w-[240px] justify-start text-left font-normal",
+                            !selectedDate && "text-muted-foreground"
+                          )}
+                        >
+                          <CalendarIcon className="mr-2 h-4 w-4" />
+                          {selectedDate ? format(selectedDate, "PPP") : <span>Selecione uma data</span>}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <Calendar
+                          mode="single"
+                          selected={selectedDate}
+                          onSelect={setSelectedDate}
+                          initialFocus
+                        />
+                      </PopoverContent>
+                    </Popover>
+                  </div>
+
+                  {/* Body Weight Input */}
+                  <div className="flex flex-col space-y-2">
+                    <Label htmlFor="bodyWeight">Peso Corporal (kg)</Label>
+                    <Input
+                      id="bodyWeight"
+                      type="number"
+                      step="0.1"
+                      value={bodyWeight}
+                      onChange={(e) => setBodyWeight(e.target.value ? parseFloat(e.target.value) : '')}
+                      className="w-[240px]"
+                    />
+                  </div>
+
+                  {/* Training Day Selection */}
+                  <div className="flex flex-col space-y-2">
+                    <Label>Dia de Treino</Label>
+                    <Select
+                      value={selectedPredefinedPlanDayId || ''}
+                      onValueChange={handlePredefinedPlanDaySelect}
+                    >
+                      <SelectTrigger className="w-[240px]">
+                        <SelectValue placeholder="Selecione o dia de treino" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {availableDaysFromSelectedPlan.map((day) => (
+                          <SelectItem key={day.id} value={day.id}>
+                            {day.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* Exercise Logging */}
+                  {selectedTrainingDayExercises.length > 0 && (
+                    <div className="space-y-6">
+                      {selectedTrainingDayExercises.map((exercise) => (
+                        <div key={exercise.name} className="space-y-4">
+                          <h3 className="text-lg font-semibold">{exercise.name}</h3>
+                          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                            {Array.from({ length: exercise.sets }).map((_, setIndex) => (
+                              <div key={setIndex} className="space-y-2 p-4 border rounded-lg">
+                                <p className="font-medium">Série {setIndex + 1}</p>
+                                <div className="space-y-2">
+                                  <div>
+                                    <Label>Peso (kg)</Label>
+                                    <Input
+                                      type="number"
+                                      step="0.5"
+                                      value={currentLoggedSets[exercise.name]?.[setIndex]?.weight || ''}
+                                      onChange={(e) => handleSetInputChange(exercise.name, setIndex, 'weight', e.target.value)}
+                                    />
+                                  </div>
+                                  <div>
+                                    <Label>Repetições</Label>
+                                    <Input
+                                      type="number"
+                                      value={currentLoggedSets[exercise.name]?.[setIndex]?.reps || ''}
+                                      onChange={(e) => handleSetInputChange(exercise.name, setIndex, 'reps', e.target.value)}
+                                    />
+                                  </div>
+                                  <div>
+                                    <Label>RIR (Reps in Reserve)</Label>
+                                    <Input
+                                      type="number"
+                                      min="0"
+                                      max="10"
+                                      value={currentLoggedSets[exercise.name]?.[setIndex]?.rir || ''}
+                                      onChange={(e) => handleSetInputChange(exercise.name, setIndex, 'rir', e.target.value)}
+                                    />
+                                  </div>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  <Button type="submit" className="w-full">
+                    Salvar Progresso
+                  </Button>
+                </div>
+              </form>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="history">
+          <div className="space-y-4">
+            {progressData.map((entry) => (
+              <Collapsible
+                key={entry.date}
+                open={expandedWorkout === entry.date}
+                onOpenChange={() => setExpandedWorkout(expandedWorkout === entry.date ? null : entry.date)}
+              >
+                <Card>
+                  <CardHeader className="cursor-pointer">
+                    <CollapsibleTrigger asChild>
+                      <div className="flex justify-between items-center">
+                        <CardTitle className="text-lg">
+                          {format(new Date(entry.date), 'dd/MM/yyyy')} - {getPlanDayName(entry.selectedPlanId, entry.selectedPlanDayId)}
+                        </CardTitle>
+                        {expandedWorkout === entry.date ? (
+                          <ChevronUp className="h-4 w-4" />
+                        ) : (
+                          <ChevronDown className="h-4 w-4" />
+                        )}
+                      </div>
+                    </CollapsibleTrigger>
+                  </CardHeader>
+                  <CollapsibleContent>
+                    <CardContent>
+                      <div className="space-y-4">
+                        <div className="flex items-center space-x-2">
+                          <span className="font-medium">Peso Corporal:</span>
+                          <span>{entry.bodyWeight} kg</span>
+                        </div>
+                        {entry.loggedExercises.map((exercise) => (
+                          <div key={exercise.name} className="space-y-2">
+                            <h4 className="font-medium">{exercise.name}</h4>
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
+                              {exercise.loggedSets?.map((set, index) => (
+                                <div key={index} className="p-2 bg-secondary rounded-lg">
+                                  <p>Série {index + 1}</p>
+                                  <p>{set.weight}kg x {set.reps} reps (RIR: {set.rir})</p>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </CardContent>
+                  </CollapsibleContent>
+                </Card>
+              </Collapsible>
+            ))}
+          </div>
+        </TabsContent>
+
+        <TabsContent value="achievements">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {achievements.map((achievement) => (
+              <Card key={achievement.id}>
+                <CardHeader>
+                  <div className="flex items-center space-x-4">
+                    {achievement.icon}
+                    <div>
+                      <CardTitle>{achievement.title}</CardTitle>
+                      <p className="text-sm text-muted-foreground">{achievement.description}</p>
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-2">
+                    <div className="flex justify-between text-sm">
+                      <span>Progresso</span>
+                      <span>{achievement.progress}/{achievement.target}</span>
+                    </div>
+                    <div className="h-2 bg-secondary rounded-full overflow-hidden">
+                      <div
+                        className={cn(
+                          "h-full rounded-full transition-all",
+                          achievement.completed ? "bg-green-500" : "bg-primary"
+                        )}
+                        style={{
+                          width: `${Math.min((achievement.progress / achievement.target) * 100, 100)}%`,
+                        }}
+                      />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </TabsContent>
+      </Tabs>
+    </div>
+  );
 }
